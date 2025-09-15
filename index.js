@@ -63,11 +63,15 @@ app.post("/webhook", async (req, res) => {
         reply
       );
 
+      console.log("Saved messageCount", messageCount);
+
       // --- Save summary ---
       if (messageCount >= SAVE_MESSAGE_COUNT) {
         const newSummary = await claudeApi.createSummary(memory.messages, memory.summary.text);
         await db.updateSummary(user.id, newSummary);
         await db.deleteMessages(user.id);
+
+        console.log("Saved summary", newSummary);
       }
 
       // --- Send back to WhatsApp ---
@@ -89,7 +93,7 @@ app.post("/webhook", async (req, res) => {
 
     res.sendStatus(200);
   } catch (err) {
-    claudeResp;
+    reply;
     console.error("❌ Webhook error:", err.response?.data || err.message);
     res.sendStatus(500);
   }
