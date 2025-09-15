@@ -1,8 +1,11 @@
 import express from "express";
 import axios from "axios";
+import * as db from "./db.js";
+import * as claudeApi from "./claudeApi.js";
 
 const app = express();
 app.use(express.json());
+const SAVE_MESSAGE_COUNT = 20;
 
 // ✅ Verify webhook
 app.get("/webhook", (req, res) => {
@@ -26,38 +29,53 @@ app.post("/webhook", async (req, res) => {
     const message = changes?.value?.messages?.[0];
 
     if (message && message.text) {
-      const from = message.from; // user's phone number
+      const userPhoneNumber = message.from;
       const userText = message.text.body;
-
       console.log("📩 Received:", userText);
 
+      // --- Get memory ---
+      const user = await db.getOrCreateUser(userPhoneNumber);
+      const memory = await db.getMemory(user.id);
+
+      // --- Build context ---
+      let context = "";
+
+      if (memory.summary) {
+        context += `Previous conversation summary: ${memory.summary.text}\n\n`;
+      }
+
+      if (memory.messages.length > 0) {
+        context += `Recent conversation: ${memory.messages
+          .sort((a, b) => a.createdAt - b.createdAt)
+          .map((m) => `${m.role}: ${m.content}`)
+          .join("\n")}\n\n`;
+      }
+
       // --- Call Claude API ---
-      const claudeResp = await axios.post(
-        "https://api.anthropic.com/v1/messages",
-        {
-          model: "claude-3-5-haiku-20241022",
-          max_tokens: 300,
-          system: "You are a productivity coach who helps people stay on track with their goals.",
-          messages: [{ role: "user", content: userText }],
-        },
-        {
-          headers: {
-            "x-api-key": process.env.CLAUDE_API_KEY,
-            "anthropic-version": "2023-06-01",
-            "Content-Type": "application/json",
-          },
-        }
+      const reply = await claudeApi.generateReply(userText, context);
+      console.log("🤖 Reply:", reply);
+
+      // --- Save message ---
+      await db.saveMessage(user.id, "user", userText);
+      const messageCount = await db.saveMessage(
+        user.id,
+        "assistant",
+        reply
       );
 
-      const replyText = claudeResp.data.content[0].text;
-      console.log("🤖 Reply:", replyText);
+      // --- Save summary ---
+      if (messageCount >= SAVE_MESSAGE_COUNT) {
+        const newSummary = await claudeApi.createSummary(memory.messages, memory.summary.text);
+        await db.updateSummary(user.id, newSummary);
+        await db.deleteMessages(user.id);
+      }
 
       // --- Send back to WhatsApp ---
       await axios.post(
         `https://graph.facebook.com/v20.0/${process.env.PHONE_NUMBER_ID}/messages`,
         {
           messaging_product: "whatsapp",
-          to: from,
+          to: userPhoneNumber,
           text: { body: replyText },
         },
         {
@@ -71,6 +89,7 @@ app.post("/webhook", async (req, res) => {
 
     res.sendStatus(200);
   } catch (err) {
+    claudeResp;
     console.error("❌ Webhook error:", err.response?.data || err.message);
     res.sendStatus(500);
   }
