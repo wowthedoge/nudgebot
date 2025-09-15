@@ -67,7 +67,10 @@ app.post("/webhook", async (req, res) => {
 
       // --- Save summary ---
       if (messageCount >= SAVE_MESSAGE_COUNT) {
-        const newSummary = await claudeApi.createSummary(memory.messages, memory.summary.text);
+        const newSummary = await claudeApi.createSummary(
+          memory.messages,
+          memory.summary?.text || ""
+        );
         await db.updateSummary(user.id, newSummary);
         await db.deleteMessages(user.id);
 
