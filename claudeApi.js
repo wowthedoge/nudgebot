@@ -1,31 +1,31 @@
 import axios from "axios";
 
-export async function generateReply(userText, context, options = {}) {
-  const {
-    model = "claude-3-5-haiku-20241022",
-    maxTokens = 300,
-    systemPrompt = "You are a productivity coach who helps people stay on track with their goals.",
-  } = options;
+const model = "claude-3-5-haiku-20241022";
+const maxTokens = 300;
+const commonHeaders = {
+  "x-api-key": process.env.CLAUDE_API_KEY,
+  "anthropic-version": "2023-06-01",
+  "Content-Type": "application/json",
+};
+let commonPrompt =
+  "You are a productivity coach who helps people stay on track with their goals.";
+
+export async function generateReply(userText, context) {
+  const prompt = `${commonPrompt} You have access to the user's conversation history and summary to provide personalized advice.
+
+  ${context ? `User's context:\n${context}` : ""}`;
 
   try {
     const claudeResp = await axios.post(
       "https://api.anthropic.com/v1/messages",
       {
-        model,
+        model: model,
         max_tokens: maxTokens,
-        system: `${systemPrompt} You have access to the user's conversation history and summary to provide personalized advice.
-  
-  ${context ? `User's context:\n${context}` : ""}
-  
-  Respond as a helpful productivity coach who remembers previous conversations.`,
+        system: prompt,
         messages: [{ role: "user", content: userText }],
       },
       {
-        headers: {
-          "x-api-key": process.env.CLAUDE_API_KEY,
-          "anthropic-version": "2023-06-01",
-          "Content-Type": "application/json",
-        },
+        headers: commonHeaders,
       }
     );
 
@@ -40,22 +40,20 @@ export async function generateReply(userText, context, options = {}) {
 }
 
 export async function createSummary(messages, previousSummary) {
-  const {
-    model = "claude-3-5-haiku-20241022",
-    maxTokens = 500,
-    systemPrompt = `You are a productivity coach who helps people stay on track with their goals. You are given a list of messages and the previous summary and you need to create a new summary of the conversation. Remember to include the details of each of the user's goals.
 
-    ${previousSummary ? `Previous summary: ${previousSummary}` : ""}
-    `,
-  } = options;
+  const prompt = `${commonPrompt} You might have access to the user's conversation history and summary to create a new summary of the conversation.
+
+  ${previousSummary ? `Previous summary: ${previousSummary}` : ""}
+  
+  The summary should include the details of the user's goals. Don't leave anything out. Reply with only the summary and nothing else.`;
 
   try {
     const claudeResp = await axios.post(
       "https://api.anthropic.com/v1/messages",
       {
-        model,
+        model: model,
         max_tokens: maxTokens,
-        system: systemPrompt,
+        system: prompt,
         messages: [
           {
             role: "user",
@@ -64,11 +62,7 @@ export async function createSummary(messages, previousSummary) {
         ],
       },
       {
-        headers: {
-          "x-api-key": process.env.CLAUDE_API_KEY,
-          "anthropic-version": "2023-06-01",
-          "Content-Type": "application/json",
-        },
+        headers: commonHeaders,
       }
     );
 
