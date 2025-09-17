@@ -1,13 +1,13 @@
 import axios from "axios";
 
 const model = "claude-3-5-haiku-20241022";
-const maxTokens = 300;
+const defaultMaxTokens = 300;
 const commonHeaders = {
   "x-api-key": process.env.CLAUDE_API_KEY,
   "anthropic-version": "2023-06-01",
   "Content-Type": "application/json",
 };
-let commonPrompt =
+const commonPrompt =
   "You are a productivity coach who helps people stay on track with their goals.";
 
 export async function generateReply(userText, context) {
@@ -20,7 +20,7 @@ export async function generateReply(userText, context) {
       "https://api.anthropic.com/v1/messages",
       {
         model: model,
-        max_tokens: maxTokens,
+        max_tokens: defaultMaxTokens,
         system: prompt,
         messages: [{ role: "user", content: userText }],
       },
@@ -52,7 +52,7 @@ export async function createSummary(messages, previousSummary) {
       "https://api.anthropic.com/v1/messages",
       {
         model: model,
-        max_tokens: maxTokens,
+        max_tokens: 600,
         system: prompt,
         messages: [
           {

@@ -40,14 +40,13 @@ app.post("/webhook", async (req, res) => {
       // --- Build context ---
       let context = "";
 
-      if (memory.summary) {
+      if (memory?.summary) {
         context += `Previous conversation summary: ${memory.summary.text}\n\n`;
       }
 
-      if (memory.messages.length > 0) {
+      if (memory?.messages?.length > 0) {
         context += `Recent conversation: ${memory.messages
-          .sort((a, b) => a.createdAt - b.createdAt)
-          .map((m) => `${m.role}: ${m.content}`)
+          .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))          .map((m) => `${m.role}: ${m.content}`)
           .join("\n")}\n\n`;
       }
 
@@ -83,10 +82,10 @@ app.post("/webhook", async (req, res) => {
         {
           messaging_product: "whatsapp",
           to: userPhoneNumber,
-          text: { body: replyText },
+          text: { body: reply },
         },
         {
-          headers: {
+          headers: {  
             Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
             "Content-Type": "application/json",
           },
