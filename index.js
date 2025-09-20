@@ -80,7 +80,7 @@ async function processScheduledMessages() {
   }
 }
 
-const SCHEDULED_MESSAGE_INTERVAL = process.env.SCHEDULED_MESSAGE_INTERVAL_MINUTES || 5 * 60 * 1000;
+const SCHEDULED_MESSAGE_INTERVAL = (process.env.SCHEDULED_MESSAGE_INTERVAL_MINUTES || 5) * 60 * 1000;
 setInterval(processScheduledMessages, SCHEDULED_MESSAGE_INTERVAL);
 
 // Run once on startup to catch any messages that should have been sent while the server was down
