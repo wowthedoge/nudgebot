@@ -14,10 +14,11 @@ datasource db {
 }
 
 model User {
-  id          Int       @id @default(autoincrement())
-  phoneNumber String    @unique
-  messages    Message[]
-  summary     Summary?
+  id               Int                @id @default(autoincrement())
+  phoneNumber      String             @unique
+  messages         Message[]
+  summary          Summary?
+  ScheduledMessage ScheduledMessage[]
 }
 
 model Message {
@@ -34,6 +35,18 @@ model Summary {
   id     Int    @id @default(autoincrement())
   text   String
   userId Int    @unique
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model ScheduledMessage {
+  id          Int       @id @default(autoincrement())
+  content     String
+  scheduledAt DateTime
+  createdAt   DateTime  @default(now())
+  sent        Boolean   @default(false)
+  sentAt      DateTime?
+  userId      Int
 
   user User @relation(fields: [userId], references: [id])
 }
