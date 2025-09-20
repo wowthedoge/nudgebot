@@ -51,6 +51,8 @@ export async function generateReply(userText, context, userId) {
           response += content.text;
         } else if (content.type === 'tool_use' && content.name === 'scheduleMessage') {
           const { content: messageContent, scheduledAt } = content.input;
+
+          console.log("Received tool use", messageContent, scheduledAt, userId);
           
           // Call the actual scheduleMessage function
           await scheduleMessage(messageContent, scheduledAt, userId);
