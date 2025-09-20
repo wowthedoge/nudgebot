@@ -51,7 +51,7 @@ app.post("/webhook", async (req, res) => {
       }
 
       // --- Call Claude API ---
-      const reply = await claudeApi.generateReply(userText, context);
+      const reply = await claudeApi.generateReply(userText, context, user.id);
       console.log("🤖 Reply:", reply);
 
       // --- Save message ---

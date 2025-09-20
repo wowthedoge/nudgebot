@@ -28,7 +28,7 @@ const commonPrompt =
     }
   };
 
-export async function generateReply(userText, context) {
+export async function generateReply(userText, context, userId) {
   const prompt = `${commonPrompt} You have access to the user's conversation history and summary to provide personalized advice.
 
   ${context ? `User's context:\n${context}` : ""}`;
