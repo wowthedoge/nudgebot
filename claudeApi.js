@@ -1,5 +1,5 @@
-import Anthropic from '@anthropic-ai/sdk';
-import * as db from './db.js';
+import Anthropic from "@anthropic-ai/sdk";
+import * as db from "./db.js";
 
 const client = new Anthropic({
   apiKey: process.env.CLAUDE_API_KEY,
@@ -10,7 +10,8 @@ const defaultMaxTokens = 150;
 const commonPrompt =
   "You are a productivity coach WhatsApp bot who helps people stay on track with their goals who replies in a casual, conversational manner fit for WhatsApp texts.";
 
-  const scheduleMessageTool = {
+function getScheduleMessageTool() {
+  return {
     name: "scheduleMessage",
     description: `Schedule a message to be sent to the user at a specific time in the future. Note: it is currently ${new Date().toLocaleString()} Use this to schedule check-ins on the user for their goals. For example, if the user's goal is to wake up at 5am, schedule a message at 5am to check in on them. Another example: If the user has a bad habit of using their phone too much at night, schedule messages at 10pm asking if they are using their phone.`,
     input_schema: {
@@ -18,16 +19,18 @@ const commonPrompt =
       properties: {
         content: {
           type: "string",
-          description: "The message content to send to the user"
+          description: "The message content to send to the user",
         },
         scheduledAt: {
           type: "string",
-          description: "ISO 8601 datetime string for when to send the message (e.g., '2024-01-15T10:30:00Z')"
-        }
+          description:
+            "ISO 8601 datetime string for when to send the message (e.g., '2024-01-15T10:30:00Z')",
+        },
       },
-      required: ["content", "scheduledAt"]
-    }
+      required: ["content", "scheduledAt"],
+    },
   };
+}
 
 export async function generateReply(userText, context, userId) {
   const prompt = `${commonPrompt} You have access to the user's conversation history and summary to provide personalized advice.
@@ -40,40 +43,40 @@ export async function generateReply(userText, context, userId) {
       max_tokens: defaultMaxTokens,
       system: prompt,
       messages: [{ role: "user", content: userText }],
-      tools: [scheduleMessageTool],
+      tools: [getScheduleMessageTool()],
     });
 
     // Handle tool use
-    if (message.content.some(content => content.type === 'tool_use')) {
+    if (message.content.some((content) => content.type === "tool_use")) {
       let response = "";
-      
+
       for (const content of message.content) {
-        if (content.type === 'text') {
+        if (content.type === "text") {
           response += content.text;
-        } else if (content.type === 'tool_use' && content.name === 'scheduleMessage') {
+        } else if (
+          content.type === "tool_use" &&
+          content.name === "scheduleMessage"
+        ) {
           const { content: messageContent, scheduledAt } = content.input;
 
           console.log("Received tool use", messageContent, scheduledAt, userId);
-          
+
           // Call the actual scheduleMessage function
           await scheduleMessage(messageContent, scheduledAt, userId);
-          
+
           // Add confirmation to response
           const scheduledDate = new Date(scheduledAt).toLocaleString();
           response += `\n\n✅ I've scheduled a message for ${scheduledDate}`;
         }
       }
-      
+
       return response.trim();
     }
 
     // Return regular text response if no tools were used
     return message.content[0].text;
   } catch (error) {
-    console.error(
-      "❌ Claude API error:",
-      error.message
-    );
+    console.error("❌ Claude API error:", error.message);
     throw new Error("Failed to get message response from Claude API");
   }
 }
@@ -100,10 +103,7 @@ export async function createSummary(messages, previousSummary) {
 
     return message.content[0].text;
   } catch (error) {
-    console.error(
-      "❌ Claude API error:",
-      error.message
-    );
+    console.error("❌ Claude API error:", error.message);
     throw new Error("Failed to get summary response from Claude API");
   }
 }
