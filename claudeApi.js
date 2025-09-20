@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import prisma from './prisma';
 
 const client = new Anthropic({
   apiKey: process.env.CLAUDE_API_KEY,
@@ -11,7 +12,7 @@ const commonPrompt =
 
   const scheduleMessageTool = {
     name: "scheduleMessage",
-    description: "Schedule a message to be sent to the user at a specific time in the future. Use this to schedule check-ins on the user for their goals. For example, if the user's goal is to wake up at 5am, schedule a message at 5am to check in on them. Another example: If the user has a bad habit of using their phone too much at night, schedule messages at 10pm asking if they are using their phone.",
+    description: `Schedule a message to be sent to the user at a specific time in the future. Note: it is currently ${new Date().toLocaleString()} Use this to schedule check-ins on the user for their goals. For example, if the user's goal is to wake up at 5am, schedule a message at 5am to check in on them. Another example: If the user has a bad habit of using their phone too much at night, schedule messages at 10pm asking if they are using their phone.`,
     input_schema: {
       type: "object",
       properties: {
@@ -109,11 +110,11 @@ export async function createSummary(messages, previousSummary) {
 
 function scheduleMessage(content, scheduledAt, userId) {
   console.log("Scheduling message:", content, scheduledAt, userId);
-  // return prisma.scheduledMessage.create({
-  //   data: {
-  //     content,
-  //     scheduledAt,
-  //     userId,
-  //   },
-  // });
+  return prisma.scheduledMessage.create({
+    data: {
+      content,
+      scheduledAt,
+      userId,
+    },
+  });
 }
