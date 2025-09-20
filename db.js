@@ -46,3 +46,8 @@ export async function getMemory(userId) {
   });
 }
 
+export async function saveScheduledMessage(content, scheduledAt, userId) {
+  return prisma.scheduledMessage.create({
+    data: { content, scheduledAt, userId },
+  });
+}

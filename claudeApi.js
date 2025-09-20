@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import prisma from './prisma';
+import * as db from './db.js';
 
 const client = new Anthropic({
   apiKey: process.env.CLAUDE_API_KEY,
@@ -110,11 +110,5 @@ export async function createSummary(messages, previousSummary) {
 
 function scheduleMessage(content, scheduledAt, userId) {
   console.log("Scheduling message:", content, scheduledAt, userId);
-  return prisma.scheduledMessage.create({
-    data: {
-      content,
-      scheduledAt,
-      userId,
-    },
-  });
+  return db.saveScheduledMessage(content, scheduledAt, userId);
 }
