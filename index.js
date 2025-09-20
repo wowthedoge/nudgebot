@@ -21,6 +21,71 @@ app.get("/webhook", (req, res) => {
   }
 });
 
+// Function to send WhatsApp message
+async function sendWhatsAppMessage(phoneNumber, messageContent) {
+  try {
+    await axios.post(
+      `https://graph.facebook.com/v20.0/${process.env.PHONE_NUMBER_ID}/messages`,
+      {
+        messaging_product: "whatsapp",
+        to: phoneNumber,
+        text: { body: messageContent },
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    console.log(`📤 Sent scheduled message to ${phoneNumber}: ${messageContent}`);
+  } catch (error) {
+    console.error(`❌ Failed to send scheduled message to ${phoneNumber}:`, error.response?.data || error.message);
+    throw error;
+  }
+}
+
+// Function to process scheduled messages
+async function processScheduledMessages() {
+  try {
+    console.log("🔍 Checking for scheduled messages...");
+    const pendingMessages = await db.getPendingScheduledMessages();
+    
+    if (pendingMessages.length === 0) {
+      console.log("📭 No scheduled messages to send");
+      return;
+    }
+
+    console.log(`📬 Found ${pendingMessages.length} scheduled message(s) to send`);
+
+    for (const scheduledMessage of pendingMessages) {
+      try {
+        // Send the message via WhatsApp
+        await sendWhatsAppMessage(scheduledMessage.user.phoneNumber, scheduledMessage.content);
+        
+        // Mark as sent in database
+        await db.markScheduledMessageAsSent(scheduledMessage.id);
+        
+        // Save the message to conversation history
+        await db.saveMessage(scheduledMessage.userId, "assistant", scheduledMessage.content);
+        
+        console.log(`✅ Successfully sent scheduled message ID: ${scheduledMessage.id}`);
+      } catch (error) {
+        console.error(`❌ Failed to process scheduled message ID: ${scheduledMessage.id}`, error);
+        // Continue with other messages even if one fails
+      }
+    }
+  } catch (error) {
+    console.error("❌ Error processing scheduled messages:", error);
+  }
+}
+
+const SCHEDULED_MESSAGE_INTERVAL = 0.5 * 60 * 1000; // 0.5 minutes
+setInterval(processScheduledMessages, SCHEDULED_MESSAGE_INTERVAL);
+
+// Run once on startup to catch any messages that should have been sent while the server was down
+processScheduledMessages();
+
 // ✅ Handle WhatsApp messages
 app.post("/webhook", async (req, res) => {
   try {
@@ -77,20 +142,7 @@ app.post("/webhook", async (req, res) => {
       }
 
       // --- Send back to WhatsApp ---
-      await axios.post(
-        `https://graph.facebook.com/v20.0/${process.env.PHONE_NUMBER_ID}/messages`,
-        {
-          messaging_product: "whatsapp",
-          to: userPhoneNumber,
-          text: { body: reply },
-        },
-        {
-          headers: {  
-            Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      await sendWhatsAppMessage(userPhoneNumber, reply);
     }
 
     res.sendStatus(200);
@@ -102,4 +154,5 @@ app.post("/webhook", async (req, res) => {
 
 app.listen(process.env.PORT || 3000, () => {
   console.log("🚀 WhatsApp Claude bot running...");
+  console.log(`⏰ Scheduled message checker running every ${SCHEDULED_MESSAGE_INTERVAL / 60000} minutes`);
 });

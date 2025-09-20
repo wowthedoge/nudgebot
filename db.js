@@ -51,3 +51,27 @@ export async function saveScheduledMessage(content, scheduledAt, userId) {
     data: { content, scheduledAt, userId },
   });
 }
+
+export async function getPendingScheduledMessages() {
+  return prisma.scheduledMessage.findMany({
+    where: {
+      sent: false,
+      scheduledAt: {
+        lte: new Date(), // Messages scheduled for now or earlier
+      },
+    },
+    include: {
+      user: true, // Include user data to get phone number
+    },
+  });
+}
+
+export async function markScheduledMessageAsSent(messageId) {
+  return prisma.scheduledMessage.update({
+    where: { id: messageId },
+    data: {
+      sent: true,
+      sentAt: new Date(),
+    },
+  });
+}
