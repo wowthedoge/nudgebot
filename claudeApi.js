@@ -1,14 +1,14 @@
 import axios from "axios";
 
 const model = "claude-3-5-haiku-20241022";
-const defaultMaxTokens = 300;
+const defaultMaxTokens = 50;
 const commonHeaders = {
   "x-api-key": process.env.CLAUDE_API_KEY,
   "anthropic-version": "2023-06-01",
   "Content-Type": "application/json",
 };
 const commonPrompt =
-  "You are a productivity coach who helps people stay on track with their goals.";
+  "You are a productivity coach WhatsApp bot who helps people stay on track with their goals who replies in a casual, conversational manner fit for WhatsApp texts.";
 
 export async function generateReply(userText, context) {
   const prompt = `${commonPrompt} You have access to the user's conversation history and summary to provide personalized advice.
