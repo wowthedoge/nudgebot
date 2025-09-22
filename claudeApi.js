@@ -10,11 +10,24 @@ const defaultMaxTokens = 150;
 const commonPrompt =
   "You are a productivity coach WhatsApp bot who helps people stay on track with their goals who replies in a casual, conversational manner fit for WhatsApp texts.";
 
-function getScheduleMessageTool() {
-  console.log("getScheduleMessageTool current time", new Date().toLocaleString());
+function getScheduleMessageTool(timezone = "UTC") {
+  const now = new Date();
+  const userTime = now.toLocaleString("en-US", {
+    timeZone: timezone,
+    weekday: "short",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZoneName: "short",
+  });
+
+  console.log("getScheduleMessageTool current time", userTime);
+
   return {
     name: "scheduleMessage",
-    description: `Schedule a message to be sent to the user at a specific time in the future. Note: it is currently ${new Date().toLocaleString()} Use this to schedule check-ins on the user for their goals. For example, if the user's goal is to wake up at 5am, schedule a message at 5am to check in on them. Another example: If the user has a bad habit of using their phone too much at night, schedule messages at 10pm asking if they are using their phone.`,
+    description: `Schedule a message to be sent to the user at a specific time in the future. Note: it is currently ${userTime}. Use this to schedule check-ins on the user for their goals. For example, if the user's goal is to wake up at 5am, schedule a message at 5am to check in on them. Another example: If the user has a bad habit of using their phone too much at night, schedule messages at 10pm asking if they are using their phone.`,
     input_schema: {
       type: "object",
       properties: {
@@ -33,7 +46,7 @@ function getScheduleMessageTool() {
   };
 }
 
-export async function generateReply(userText, context, userId) {
+export async function generateReply(userText, context, userId, timezone) {
   const prompt = `${commonPrompt} You have access to the user's conversation history and summary to provide personalized advice.
 
   ${context ? `User's context:\n${context}` : ""}`;
@@ -44,7 +57,7 @@ export async function generateReply(userText, context, userId) {
       max_tokens: defaultMaxTokens,
       system: prompt,
       messages: [{ role: "user", content: userText }],
-      tools: [getScheduleMessageTool()],
+      tools: [getScheduleMessageTool(timezone)],
     });
 
     // Handle tool use

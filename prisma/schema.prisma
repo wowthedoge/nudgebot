@@ -16,9 +16,10 @@ datasource db {
 model User {
   id               Int                @id @default(autoincrement())
   phoneNumber      String             @unique
+  timezone         String?            @default("UTC")
   messages         Message[]
   summary          Summary?
-  ScheduledMessage ScheduledMessage[]
+  scheduledMessages ScheduledMessage[]
 }
 
 model Message {

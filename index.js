@@ -38,9 +38,9 @@ async function sendWhatsAppMessage(phoneNumber, messageContent) {
         },
       }
     );
-    console.log(`📤 Sent scheduled message to ${phoneNumber}: ${messageContent}`);
+    console.log(`📤 Sent message to ${phoneNumber}: ${messageContent}`);
   } catch (error) {
-    console.error(`❌ Failed to send scheduled message to ${phoneNumber}:`, error.response?.data || error.message);
+    console.error(`❌ Failed to send message to ${phoneNumber}:`, error.response?.data || error.message);
     throw error;
   }
 }
@@ -98,8 +98,19 @@ app.post("/webhook", async (req, res) => {
       const userText = message.text.body;
       console.log("📩 Received:", userText);
 
-      // --- Get memory ---
       const user = await db.getOrCreateUser(userPhoneNumber);
+      
+      if (!user.timezone) {
+        try {
+          const timezone = detectTimezoneFromPhone(userPhoneNumber);
+          await db.upsertUserTimezone(user.id, timezone);
+          user.timezone = timezone;
+        } catch (error) {
+          console.error("❌ Failed to get timezone for user:", userPhoneNumber, error);
+        }
+      }
+
+      // --- Get memory ---
       const memory = await db.getMemory(user.id);
 
       // --- Build context ---
@@ -116,7 +127,7 @@ app.post("/webhook", async (req, res) => {
       }
 
       // --- Call Claude API ---
-      const reply = await claudeApi.generateReply(userText, context, user.id);
+      const reply = await claudeApi.generateReply(userText, context, user.id, user.timezone);
       console.log("🤖 Reply:", reply);
 
       // --- Save message ---
