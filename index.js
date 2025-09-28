@@ -2,6 +2,7 @@ import express from "express";
 import axios from "axios";
 import * as db from "./db.js";
 import * as claudeApi from "./claudeApi.js";
+import { detectTimezoneFromPhone } from "./timezones.js";
 
 const app = express();
 app.use(express.json());
@@ -102,6 +103,7 @@ app.post("/webhook", async (req, res) => {
       
       if (!user.timezone) {
         try {
+          console.log("🔍 No timezone recorded. Detecting timezone for user:", userPhoneNumber);
           const timezone = detectTimezoneFromPhone(userPhoneNumber);
           await db.upsertUserTimezone(user.id, timezone);
           user.timezone = timezone;
