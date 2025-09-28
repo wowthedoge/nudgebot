@@ -67,7 +67,7 @@ const COUNTRY_TIMEZONE_MAP = {
 
 export function detectTimezoneFromPhone(phoneNumber) {
   try {
-    const parsed = parsePhoneNumberWithError(phoneNumber);
+    const parsed = parsePhoneNumberWithError(`+${phoneNumber}`);
     const timezone = COUNTRY_TIMEZONE_MAP[parsed.country];
     
     console.log(`📍 Detected country: ${parsed.country}, timezone: ${timezone || 'UTC'}`);
