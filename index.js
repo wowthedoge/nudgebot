@@ -105,7 +105,7 @@ app.post("/webhook", async (req, res) => {
         try {
           console.log("🔍 No timezone recorded. Detecting timezone for user:", userPhoneNumber);
           const timezone = detectTimezoneFromPhone(userPhoneNumber);
-          await db.upsertUserTimezone(user.id, timezone);
+          await db.updateUserTimezone(user.id, timezone);
           user.timezone = timezone;
         } catch (error) {
           console.error("❌ Failed to get timezone for user:", userPhoneNumber, error);

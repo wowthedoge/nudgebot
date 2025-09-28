@@ -76,10 +76,9 @@ export async function markScheduledMessageAsSent(messageId) {
   });
 }
 
-export function upsertUserTimezone(userId, timezone) {
-  return prisma.user.upsert({
+export function updateUserTimezone(userId, timezone) {
+  return prisma.user.update({
     where: { id: userId },
-    update: { timezone },
-    create: { id: userId, timezone },
+    data: { timezone },
   });
 }
