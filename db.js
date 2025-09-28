@@ -16,7 +16,7 @@ export async function saveMessage(userId, role, content) {
 
   return prisma.message.count({
     where: { userId },
-  })
+  });
 }
 
 export async function deleteMessages(userId) {
@@ -48,7 +48,7 @@ export async function getMemory(userId) {
 
 export async function saveScheduledMessage(content, scheduledAt, userId) {
   return prisma.scheduledMessage.create({
-    data: { content, scheduledAt, userId },
+    data: { content, scheduledAt: new Date(scheduledAt), userId },
   });
 }
 
