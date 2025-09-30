@@ -31,12 +31,13 @@ function getScheduleMessageTool(timezone = "UTC") {
 
 Current time in user's timezone: ${userTime}
 
-IMPORTANT: Always provide the scheduledAt in UTC format (ending with 'Z'). Convert from user's local time to UTC.
+IMPORTANT: 
+- Always provide the scheduledAt in UTC format (ending with 'Z'). Convert from user's local time to UTC.
+- When confirming to the user, ALWAYS show the scheduled time in the user's local timezone (${timezone}), not UTC.
 
 Examples:
-- If user says "5 minutes from now": calculate 5 minutes from current time and convert to UTC
-- If user says "tomorrow at 8am": calculate tomorrow 8am in user's timezone, then convert to UTC
-- If user says "tonight at 10pm": calculate today 10pm in user's timezone, then convert to UTC
+- If user says "5 minutes from now": calculate 5 minutes from current time, convert to UTC for storage, but tell user "I've scheduled this for [local time]"
+- If user says "tomorrow at 8am": calculate tomorrow 8am in user's timezone, convert to UTC for storage, but confirm "I've scheduled this for tomorrow at 8am [user's timezone]"
 
 Use this to schedule check-ins on the user for their goals.`,
     input_schema: {
@@ -83,13 +84,22 @@ export async function generateReply(userText, context, userId, timezone) {
         ) {
           const { content: messageContent, scheduledAt } = content.input;
 
-          console.log("Using tool scheduleMessage");
+          console.log("Received tool use", messageContent, scheduledAt, userId);
 
           // Call the actual scheduleMessage function
           await scheduleMessage(messageContent, scheduledAt, userId);
 
-          // Add confirmation to response
-          const scheduledDate = new Date(scheduledAt).toLocaleString();
+          // Add confirmation to response - show in user's timezone
+          const scheduledDate = new Date(scheduledAt).toLocaleString('en-US', {
+            timeZone: timezone, // Use the user's timezone for display
+            weekday: 'short',
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZoneName: 'short'
+          });
           response += `\n\n✅ I've scheduled a message for ${scheduledDate}`;
         }
       }
