@@ -1,0 +1,17 @@
+POST http://localhost:3000/webhook
+Content-Type: application/json
+
+{
+  "entry": [{
+    "changes": [{
+      "value": {
+        "messages": [{
+          "from": "60177779918",
+          "text": {
+            "body": "Remind me to exercise tomorrow at 8am"
+          }
+        }]
+      }
+    }]
+  }]
+}
