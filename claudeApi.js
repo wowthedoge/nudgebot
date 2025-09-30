@@ -25,7 +25,7 @@ function getScheduleMessageTool(timezone = "UTC") {
 
   console.log("getScheduleMessageTool current time", userTime);
 
-  return {
+  return {  
     name: "scheduleMessage",
     description: `Schedule a message to be sent to the user at a specific time in the future. Note: it is currently ${userTime}. Use this to schedule check-ins on the user for their goals. For example, if the user's goal is to wake up at 5am, schedule a message at 5am to check in on them. Another example: If the user has a bad habit of using their phone too much at night, schedule messages at 10pm asking if they are using their phone.`,
     input_schema: {
@@ -73,7 +73,7 @@ export async function generateReply(userText, context, userId, timezone) {
         ) {
           const { content: messageContent, scheduledAt } = content.input;
 
-          console.log("Received tool use", messageContent, scheduledAt, userId);
+          console.log("Using tool scheduleMessage");
 
           // Call the actual scheduleMessage function
           await scheduleMessage(messageContent, scheduledAt, userId);
