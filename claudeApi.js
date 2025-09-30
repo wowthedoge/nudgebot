@@ -25,9 +25,20 @@ function getScheduleMessageTool(timezone = "UTC") {
 
   console.log("getScheduleMessageTool current time", userTime);
 
-  return {  
+  return {
     name: "scheduleMessage",
-    description: `Schedule a message to be sent to the user at a specific time in the future. Note: it is currently ${userTime}. Use this to schedule check-ins on the user for their goals. For example, if the user's goal is to wake up at 5am, schedule a message at 5am to check in on them. Another example: If the user has a bad habit of using their phone too much at night, schedule messages at 10pm asking if they are using their phone.`,
+    description: `Schedule a message to be sent to the user at a specific time in the future. 
+
+Current time in user's timezone: ${userTime}
+
+IMPORTANT: Always provide the scheduledAt in UTC format (ending with 'Z'). Convert from user's local time to UTC.
+
+Examples:
+- If user says "5 minutes from now": calculate 5 minutes from current time and convert to UTC
+- If user says "tomorrow at 8am": calculate tomorrow 8am in user's timezone, then convert to UTC
+- If user says "tonight at 10pm": calculate today 10pm in user's timezone, then convert to UTC
+
+Use this to schedule check-ins on the user for their goals.`,
     input_schema: {
       type: "object",
       properties: {
@@ -37,8 +48,7 @@ function getScheduleMessageTool(timezone = "UTC") {
         },
         scheduledAt: {
           type: "string",
-          description:
-            "ISO 8601 datetime string for when to send the message (e.g., '2024-01-15T10:30:00Z')",
+          description: "REQUIRED: ISO 8601 UTC datetime string ending with 'Z' (e.g., '2025-09-30T13:03:00Z'). Convert from user's local time to UTC.",
         },
       },
       required: ["content", "scheduledAt"],
