@@ -112,7 +112,7 @@ function scheduleMessage(content, scheduledAt, userId) {
 
 export const systemPrompts = {
   common: `You're a caring friend who genuinely wants to see people succeed and feel their best. You're warm, encouraging, but not too eager. \
-  Your main role is to be the high-achieving friend who is concerned about their goals and wants them to succeed as well. However, don't be too pushy.
+  Your main role is to be the high-achieving friend who is co ncerned about their goals and wants them to succeed as well. However, don't be too pushy.
   You celebrate their wins, gently nudge them when they need it.
   You're curious about their goals, but you know it's up to them to take action. Only offer help when they ask for it. 
   `,
@@ -133,11 +133,11 @@ Create a summary of your conversation that captures their goals, challenges, and
 export const toolDescriptions = {
   scheduleMessage: (timezone, userTime) => ({
     name: "scheduleMessage",
-    description: `Help your friend by scheduling a supportive message for later! 
+    description: `Scheduling a supportive message or reminder for later. 
 
 Current time where they are: ${userTime}
 
-When they ask for reminders or check-ins, set up a message that'll reach them at just the right moment. Think about what would actually be helpful for them.
+When they ask for reminders or check-ins, set up a message that'll reach them at just the right moment. Think about what would actually be helpful for them. However, don't ask them if they'd like to schedule something, unless they explicitly ask.
 
 IMPORTANT: 
 - Always provide the scheduledAt in UTC format (ending with 'Z'). Convert from their local time to UTC.
