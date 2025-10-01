@@ -7,8 +7,6 @@ const client = new Anthropic({
 
 const model = "claude-3-5-haiku-20241022";
 const defaultMaxTokens = 150;
-const commonPrompt =
-  "You are a productivity coach WhatsApp bot who helps people stay on track with their goals who replies in a casual, conversational manner fit for WhatsApp texts.";
 
 function getScheduleMessageTool(timezone = "UTC") {
   const now = new Date();
@@ -25,42 +23,11 @@ function getScheduleMessageTool(timezone = "UTC") {
 
   console.log("getScheduleMessageTool current time", userTime);
 
-  return {
-    name: "scheduleMessage",
-    description: `Schedule a message to be sent to the user at a specific time in the future. 
-
-Current time in user's timezone: ${userTime}
-
-IMPORTANT: 
-- Always provide the scheduledAt in UTC format (ending with 'Z'). Convert from user's local time to UTC.
-- When confirming to the user, ALWAYS show the scheduled time in the user's local timezone (${timezone}), not UTC.
-
-Examples:
-- If user says "5 minutes from now": calculate 5 minutes from current time, convert to UTC for storage, but tell user "I've scheduled this for [local time]"
-- If user says "tomorrow at 8am": calculate tomorrow 8am in user's timezone, convert to UTC for storage, but confirm "I've scheduled this for tomorrow at 8am [user's timezone]"
-
-Use this to schedule check-ins on the user for their goals.`,
-    input_schema: {
-      type: "object",
-      properties: {
-        content: {
-          type: "string",
-          description: "The message content to send to the user",
-        },
-        scheduledAt: {
-          type: "string",
-          description: "REQUIRED: ISO 8601 UTC datetime string ending with 'Z' (e.g., '2025-09-30T13:03:00Z'). Convert from user's local time to UTC.",
-        },
-      },
-      required: ["content", "scheduledAt"],
-    },
-  };
+  return toolDescriptions.scheduleMessage(timezone, userTime);
 }
 
 export async function generateReply(userText, context, userId, timezone) {
-  const prompt = `${commonPrompt} You have access to the user's conversation history and summary to provide personalized advice.
-
-  ${context ? `User's context:\n${context}` : ""}`;
+  const prompt = systemPrompts.generateReply(context);
 
   try {
     const message = await client.messages.create({
@@ -91,7 +58,7 @@ export async function generateReply(userText, context, userId, timezone) {
 
           // Add confirmation to response - show in user's timezone
           const scheduledDate = new Date(scheduledAt).toLocaleString('en-US', {
-            timeZone: timezone, // Use the user's timezone for display
+            timeZone: timezone,
             weekday: 'short',
             year: 'numeric',
             month: 'short',
@@ -100,7 +67,7 @@ export async function generateReply(userText, context, userId, timezone) {
             minute: '2-digit',
             timeZoneName: 'short'
           });
-          response += `\n\n✅ I've scheduled a message for ${scheduledDate}`;
+          response += confirmationMessages.scheduledMessage(scheduledDate);
         }
       }
 
@@ -116,11 +83,7 @@ export async function generateReply(userText, context, userId, timezone) {
 }
 
 export async function createSummary(messages, previousSummary) {
-  const prompt = `${commonPrompt} You might have access to the user's conversation history and summary to create a new summary of the conversation.
-
-  ${previousSummary ? `Previous summary: ${previousSummary}` : ""}
-  
-  The summary should include the details of the user's goals. Don't leave anything out. Reply with only the summary and nothing else.`;
+  const prompt = systemPrompts.createSummary(previousSummary);
 
   try {
     const message = await client.messages.create({
@@ -146,3 +109,60 @@ function scheduleMessage(content, scheduledAt, userId) {
   console.log("Scheduling message:", content, scheduledAt, userId);
   return db.saveScheduledMessage(content, scheduledAt, userId);
 }
+
+
+export const systemPrompts = {
+  common: "You're like a caring friend who genuinely wants to see people succeed and feel their best. You're warm, encouraging, and speak naturally - like you're texting a close buddy. You celebrate their wins, gently nudge them when they need it, and always have their back.",
+
+  generateReply: (context) => `You're like a caring friend who genuinely wants to see people succeed and feel their best. You're warm, encouraging, and speak naturally - like you're texting a close buddy. You celebrate their wins, gently nudge them when they need it, and always have their back.
+
+You know their story and what they're working toward, so you can give personalized advice that actually matters to them.
+
+${context ? `Here's what you know about them:\n${context}` : ""}`,
+
+  createSummary: (previousSummary) => `You're like a caring friend who genuinely wants to see people succeed and feel their best. You're warm, encouraging, and speak naturally - like you're texting a close buddy.
+
+${previousSummary ? `What you knew before:\n${previousSummary}` : ""}
+
+Create a friendly summary of your conversation that captures their goals, challenges, and what matters to them. Write it like you're taking notes about a friend you care about - include the important stuff so you can be genuinely helpful next time. Just the summary, nothing else.`,
+};
+
+export const toolDescriptions = {
+  scheduleMessage: (timezone, userTime) => ({
+    name: "scheduleMessage",
+    description: `Help your friend by scheduling a supportive message for later! 
+
+Current time where they are: ${userTime}
+
+When they ask for reminders or check-ins, set up a message that'll reach them at just the right moment. Think about what would actually be helpful and encouraging for them.
+
+IMPORTANT: 
+- Always provide the scheduledAt in UTC format (ending with 'Z'). Convert from their local time to UTC.
+- When you confirm with them, show the time in their timezone (${timezone}) so it makes sense to them.
+
+Examples:
+- "remind me in 30 minutes" → calculate 30 min from now, store in UTC, but tell them "I'll check in with you at [their local time]"
+- "wake me up at 7am tomorrow" → calculate 7am tomorrow in their timezone, store in UTC, confirm "I'll send you a wake-up message tomorrow at 7am"
+
+You're helping them stay on track with their goals, so make it personal and caring!`,
+    input_schema: {
+      type: "object",
+      properties: {
+        content: {
+          type: "string",
+          description: "A friendly, encouraging message that will help them with their goals",
+        },
+        scheduledAt: {
+          type: "string",
+          description:
+            "REQUIRED: ISO 8601 UTC datetime string ending with 'Z' (e.g., '2025-09-30T13:03:00Z'). Convert from their local time to UTC.",
+        },
+      },
+      required: ["content", "scheduledAt"],
+    },
+  }),
+};
+
+export const confirmationMessages = {
+  scheduledMessage: (scheduledDate) => `\n\n✅ Got it! I'll send you a friendly reminder on ${scheduledDate}`,
+};
