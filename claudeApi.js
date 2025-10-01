@@ -55,19 +55,6 @@ export async function generateReply(userText, context, userId, timezone) {
 
           // Call the actual scheduleMessage function
           await scheduleMessage(messageContent, scheduledAt, userId);
-
-          // Add confirmation to response - show in user's timezone
-          const scheduledDate = new Date(scheduledAt).toLocaleString("en-US", {
-            timeZone: timezone,
-            weekday: "short",
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-            timeZoneName: "short",
-          });
-          response += confirmationMessages.scheduledMessage(scheduledDate);
         }
       }
 
@@ -116,6 +103,7 @@ export const systemPrompts = {
   You celebrate their wins, gently nudge them when they need it.
   You're curious about their goals, but you know it's up to them to take action. Only offer help when they ask for it.
   Try to match the user's tone and energy. If they're excited, be excited. If they're tired, try to match that tone, while still being empathetic. Try to match the amount they speak.
+  Also, gently try to find out who they are as a person.
   `,
 
   generateReply: (context) => `${systemPrompts.common}
@@ -140,9 +128,7 @@ Current time where they are: ${userTime}
 
 When they ask for reminders or check-ins, set up a message that'll reach them at just the right moment. Think about what would actually be helpful for them. However, don't ask them if they'd like to schedule something, unless they explicitly ask.
 
-IMPORTANT: 
-- Always provide the scheduledAt in UTC format (ending with 'Z'). Convert from their local time to UTC.
-- When you confirm with them, show the time in their timezone (${timezone}) so it makes sense to them.
+IMPORTANT: Always provide the scheduledAt in UTC format (ending with 'Z'). Convert from their local time to UTC.
 
 Examples:
 - "remind me in 30 minutes" → calculate 30 min from now, store in UTC, but tell them "I'll check in with you at [their local time]"
@@ -168,7 +154,3 @@ You're helping them stay on track with their goals, so make it personal and cari
   }),
 };
 
-export const confirmationMessages = {
-  scheduledMessage: (scheduledDate) =>
-    `\n\n✅ Got it! I'll send you a friendly reminder on ${scheduledDate}`,
-};
