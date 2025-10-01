@@ -57,15 +57,15 @@ export async function generateReply(userText, context, userId, timezone) {
           await scheduleMessage(messageContent, scheduledAt, userId);
 
           // Add confirmation to response - show in user's timezone
-          const scheduledDate = new Date(scheduledAt).toLocaleString('en-US', {
+          const scheduledDate = new Date(scheduledAt).toLocaleString("en-US", {
             timeZone: timezone,
-            weekday: 'short',
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            timeZoneName: 'short'
+            weekday: "short",
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            timeZoneName: "short",
           });
           response += confirmationMessages.scheduledMessage(scheduledDate);
         }
@@ -83,7 +83,7 @@ export async function generateReply(userText, context, userId, timezone) {
 }
 
 export async function createSummary(messages, previousSummary) {
-  const prompt = systemPrompts.createSummary(previousSummary);
+  const prompt = systemPrompts.createSummary(messages, previousSummary);
 
   try {
     const message = await client.messages.create({
@@ -110,21 +110,24 @@ function scheduleMessage(content, scheduledAt, userId) {
   return db.saveScheduledMessage(content, scheduledAt, userId);
 }
 
-
 export const systemPrompts = {
-  common: "You're like a caring friend who genuinely wants to see people succeed and feel their best. You're warm, encouraging, but not too eager - like you're texting a close buddy. You celebrate their wins, gently nudge them when they need it. You're curious about their goals, but you know it's up to them to take action.",
+  common: `You're a caring friend who genuinely wants to see people succeed and feel their best. You're warm, encouraging, but not too eager. \
+  Your main role is to be the high-achieving friend who is concerned about their goals and wants them to succeed as well. However, don't be too pushy.
+  You celebrate their wins, gently nudge them when they need it.
+  You're curious about their goals, but you know it's up to them to take action. Only offer help when they ask for it. 
+  `,
 
   generateReply: (context) => `${systemPrompts.common}
 
-You know their story and what they're working toward, so you can give personalized advice that actually matters to them.
+${context ? `Here's the previous conversation:\n${context}` : ""}`,
 
-${context ? `Here's what you know about them:\n${context}` : ""}`,
+  createSummary: (messages, previousSummary) => `
 
-  createSummary: (previousSummary) => `${systemPrompts.common}
+${messages.map((m) => `${m.role}: ${m.content}`).join("\n")}
 
-${previousSummary ? `What you knew before:\n${previousSummary}` : ""}
+${previousSummary ? `Previous summary: ${previousSummary}` : ""}
 
-Create a friendly summary of your conversation that captures their goals, challenges, and what matters to them. Write it like you're taking notes about a friend you care about - include the important stuff so you can be genuinely helpful next time. Just the summary, nothing else.`,
+Create a summary of your conversation that captures their goals, challenges, and what matters to them. Write it like you're taking notes about a friend you care about - include the important stuff so you can be genuinely helpful next time. Just the summary, nothing else.`,
 };
 
 export const toolDescriptions = {
@@ -134,7 +137,7 @@ export const toolDescriptions = {
 
 Current time where they are: ${userTime}
 
-When they ask for reminders or check-ins, set up a message that'll reach them at just the right moment. Think about what would actually be helpful and encouraging for them.
+When they ask for reminders or check-ins, set up a message that'll reach them at just the right moment. Think about what would actually be helpful for them.
 
 IMPORTANT: 
 - Always provide the scheduledAt in UTC format (ending with 'Z'). Convert from their local time to UTC.
@@ -150,7 +153,8 @@ You're helping them stay on track with their goals, so make it personal and cari
       properties: {
         content: {
           type: "string",
-          description: "A friendly, encouraging message that will help them with their goals",
+          description:
+            "A friendly, encouraging message that will help them with their goals",
         },
         scheduledAt: {
           type: "string",
@@ -164,5 +168,6 @@ You're helping them stay on track with their goals, so make it personal and cari
 };
 
 export const confirmationMessages = {
-  scheduledMessage: (scheduledDate) => `\n\n✅ Got it! I'll send you a friendly reminder on ${scheduledDate}`,
+  scheduledMessage: (scheduledDate) =>
+    `\n\n✅ Got it! I'll send you a friendly reminder on ${scheduledDate}`,
 };
