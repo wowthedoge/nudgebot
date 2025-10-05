@@ -97,7 +97,7 @@ app.post("/webhook", async (req, res) => {
     if (message && message.text) {
       const userPhoneNumber = message.from;
       const userText = message.text.body;
-      console.log("📩 Received message:", userText);
+      console.log(`📩 Received message from ${userPhoneNumber}: ${userText}`);
 
       const user = await db.getOrCreateUser(userPhoneNumber);
       

@@ -50,10 +50,6 @@ export async function generateReply(userText, context, userId, timezone) {
           content.name === "scheduleMessage"
         ) {
           const { content: messageContent, scheduledAt } = content.input;
-
-          console.log("Received tool use", messageContent, scheduledAt, userId);
-
-          // Call the actual scheduleMessage function
           await scheduleMessage(messageContent, scheduledAt, userId);
         }
       }
@@ -93,7 +89,7 @@ export async function createSummary(messages, previousSummary) {
 }
 
 function scheduleMessage(content, scheduledAt, userId) {
-  console.log("Scheduling message:", content, scheduledAt, userId);
+  console.log("Scheduling message. | Content:", content, "| Scheduled at:", scheduledAt, "| User ID:", userId);
   return db.saveScheduledMessage(content, scheduledAt, userId);
 }
 
