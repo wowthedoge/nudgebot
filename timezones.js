@@ -77,3 +77,25 @@ export function detectTimezoneFromPhone(phoneNumber) {
     return 'UTC';
   }
 }
+
+/**
+ * Get the UTC offset for a given timezone in hours
+ * @param {string} timezone - IANA timezone identifier (e.g., 'America/New_York', 'Asia/Tokyo')
+ * @param {Date} [date=new Date()] - Optional date to calculate offset for (important for DST)
+ * @returns {number} - Offset in hours (e.g., -5 for EST, +8 for SGT)
+ */
+export function getUtcOffset(timezone, date = new Date()) {
+  try {
+    const tzTime = new Date(date.toLocaleString('en-US', { timeZone: timezone }));
+    
+    const utcTime = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' }));
+    
+    const offsetMs = tzTime - utcTime;
+    const offsetHours = offsetMs / (1000 * 60 * 60);
+    
+    return offsetHours;
+  } catch (error) {
+    console.error('Error calculating UTC offset for timezone:', timezone, error);
+    return 0;
+  }
+}

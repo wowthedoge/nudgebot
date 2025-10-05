@@ -1,5 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import * as db from "./db.js";
+import { prompts, tools } from "./promptsAndTools.js";
+import {  getUtcOffset } from "./timezones.js";
 
 const client = new Anthropic({
   apiKey: process.env.CLAUDE_API_KEY,
@@ -8,26 +10,9 @@ const client = new Anthropic({
 const model = "claude-3-5-haiku-20241022";
 const defaultMaxTokens = 150;
 
-function getScheduleMessageTool(timezone = "UTC") {
-  const now = new Date();
-  const userTime = now.toLocaleString("en-US", {
-    timeZone: timezone,
-    weekday: "short",
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZoneName: "short",
-  });
-
-  console.log("getScheduleMessageTool current time", userTime);
-
-  return toolDescriptions.scheduleMessage(timezone, userTime);
-}
-
-export async function generateReply(userText, context, userId, timezone) {
-  const prompt = systemPrompts.generateReply(context);
+export async function generateReply(userText, context, userId, userTimezone, retryCount = 0) {
+  const MAX_RETRIES = 2;
+  const prompt = prompts.generateReply(context);
 
   try {
     const message = await client.messages.create({
@@ -35,12 +20,13 @@ export async function generateReply(userText, context, userId, timezone) {
       max_tokens: defaultMaxTokens,
       system: prompt,
       messages: [{ role: "user", content: userText }],
-      tools: [getScheduleMessageTool(timezone)],
+      tools: [tools.getScheduleMessageTool()],
     });
 
     // Handle tool use
     if (message.content.some((content) => content.type === "tool_use")) {
       let response = "";
+      let hasInvalidToolCall = false;
 
       for (const content of message.content) {
         if (content.type === "text") {
@@ -50,8 +36,25 @@ export async function generateReply(userText, context, userId, timezone) {
           content.name === "scheduleMessage"
         ) {
           const { content: messageContent, scheduledAt } = content.input;
-          await scheduleMessage(messageContent, scheduledAt, userId);
+          
+          if (!scheduledAt || scheduledAt === "undefined") {
+            console.error("⚠️ scheduledAt is undefined or invalid:", { messageContent, scheduledAt });
+            hasInvalidToolCall = true;
+            
+            if (retryCount < MAX_RETRIES) {
+              return generateReply(userText, context, userId, userTimezone, retryCount + 1);
+            } else {
+              console.error("❌ Max retries reached. scheduledAt still undefined.");
+              return "I'm having trouble scheduling that right now. Could you try asking again later?";
+            }
+          }
+          
+          await scheduleMessage(messageContent, scheduledAt, userId, userTimezone);
         }
+      }
+
+      if (hasInvalidToolCall) {
+        return;
       }
 
       return response.trim();
@@ -66,7 +69,7 @@ export async function generateReply(userText, context, userId, timezone) {
 }
 
 export async function createSummary(messages, previousSummary) {
-  const prompt = systemPrompts.createSummary(messages, previousSummary);
+  const prompt = prompts.createSummary(messages, previousSummary);
 
   try {
     const message = await client.messages.create({
@@ -88,65 +91,20 @@ export async function createSummary(messages, previousSummary) {
   }
 }
 
-function scheduleMessage(content, scheduledAt, userId) {
-  console.log("Scheduling message. | Content:", content, "| Scheduled at:", scheduledAt, "| User ID:", userId);
-  return db.saveScheduledMessage(content, scheduledAt, userId);
+function scheduleMessage(content, scheduledAt, userId, userTimezone) {
+  const offset = getUtcOffset(userTimezone, new Date(scheduledAt));
+  const adjustedTime = new Date(new Date(scheduledAt).getTime() - offset * 60 * 60 * 1000);
+  console.log(
+    "Scheduling message. | Content:",
+    content,
+    "| Scheduled at (UTC):",
+    scheduledAt,
+    "| Offset:",
+    offset,
+    "| Adjusted to (User local):",
+    adjustedTime.toISOString(),
+    "| User ID:",
+    userId
+  );
+  return db.saveScheduledMessage(content, adjustedTime, userId);
 }
-
-export const systemPrompts = {
-  common: `You're a caring friend who genuinely wants to see people succeed and feel their best. You're warm, encouraging, but not too eager. \
-  Your main role is to be the high-achieving friend who is co ncerned about their goals and wants them to succeed as well. However, don't be too pushy.
-  You celebrate their wins, gently nudge them when they need it.
-  You're curious about their goals, but you know it's up to them to take action. Only offer help when they ask for it.
-  Try to match the user's tone and energy. If they're excited, be excited. If they're tired, try to match that tone, while still being empathetic. Try to match the amount they speak.
-  Also, gently try to find out who they are as a person.
-  `,
-
-  generateReply: (context) => `${systemPrompts.common}
-
-${context ? `Here's the previous conversation:\n${context}` : ""}`,
-
-  createSummary: (messages, previousSummary) => `
-
-${messages.map((m) => `${m.role}: ${m.content}`).join("\n")}
-
-${previousSummary ? `Previous summary: ${previousSummary}` : ""}
-
-Create a summary of your conversation that captures their habits, goals, challenges, and what matters to them. Write it like you're taking notes about a friend you care about - include the important stuff so you can be genuinely helpful next time. Just the summary, nothing else.`,
-};
-
-export const toolDescriptions = {
-  scheduleMessage: (timezone, userTime) => ({
-    name: "scheduleMessage",
-    description: `Scheduling a supportive message or reminder for later. 
-
-Current time where they are: ${userTime}
-
-When they ask for reminders or check-ins, set up a message that'll reach them at just the right moment. Think about what would actually be helpful for them. However, don't ask them if they'd like to schedule something, unless they explicitly ask.
-
-IMPORTANT: Always provide the scheduledAt in UTC format (ending with 'Z'). Convert from their local time to UTC.
-
-Examples:
-- "remind me in 30 minutes" → calculate 30 min from now, store in UTC, but tell them "I'll check in with you at [their local time]"
-- "wake me up at 7am tomorrow" → calculate 7am tomorrow in their timezone, store in UTC, confirm "I'll send you a wake-up message tomorrow at 7am"
-
-You're helping them stay on track with their goals, so make it personal and caring!`,
-    input_schema: {
-      type: "object",
-      properties: {
-        content: {
-          type: "string",
-          description:
-            "A friendly, encouraging message that will help them with their goals",
-        },
-        scheduledAt: {
-          type: "string",
-          description:
-            "REQUIRED: ISO 8601 UTC datetime string ending with 'Z' (e.g., '2025-09-30T13:03:00Z'). Convert from their local time to UTC.",
-        },
-      },
-      required: ["content", "scheduledAt"],
-    },
-  }),
-};
-

@@ -47,23 +47,25 @@ export async function getMemory(userId) {
 }
 
 export async function saveScheduledMessage(content, scheduledAt, userId) {
+  console.log("saveScheduledMessage", content, scheduledAt, userId);
   return prisma.scheduledMessage.create({
     data: { content, scheduledAt: new Date(scheduledAt), userId },
   });
 }
 
 export async function getPendingScheduledMessages() {
+  console.log("getPendingScheduledMessages current time", new Date());
   return prisma.scheduledMessage.findMany({
     where: {
       sent: false,
       scheduledAt: {
-        lte: new Date(), // Messages scheduled for now or earlier
+        lte: new Date(),
       },
     },
     include: {
-      user: true, // Include user data to get phone number
+      user: true,
     },
-  });
+  }); 
 }
 
 export async function markScheduledMessageAsSent(messageId) {

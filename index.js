@@ -97,6 +97,7 @@ app.post("/webhook", async (req, res) => {
     if (message && message.text) {
       const userPhoneNumber = message.from;
       const userText = message.text.body;
+      console.log("--------------------------------")
       console.log(`📩 Received message from ${userPhoneNumber}: ${userText}`);
 
       const user = await db.getOrCreateUser(userPhoneNumber);
@@ -129,7 +130,7 @@ app.post("/webhook", async (req, res) => {
       }
 
       // --- Call Claude API ---
-      const reply = await claudeApi.generateReply(userText, context, user.id, user.timezone);
+      const reply = await claudeApi.generateReply(userText, context, user.id);
       console.log("🤖 Reply from Claude:", reply);
 
       // --- Save message ---
