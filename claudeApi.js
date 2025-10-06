@@ -10,9 +10,9 @@ const client = new Anthropic({
 const model = "claude-3-5-haiku-20241022";
 const defaultMaxTokens = 150;
 
-export async function generateReply(userText, context, userId, userTimezone, retryCount = 0) {
+export async function generateReply(userText, conversation, userId, userTimezone, retryCount = 0) {
   const MAX_RETRIES = 2;
-  const prompt = prompts.generateReply(context);
+  const prompt = prompts.generateReply(conversation);
 
   try {
     const message = await client.messages.create({
@@ -41,8 +41,8 @@ export async function generateReply(userText, context, userId, userTimezone, ret
             console.error("⚠️ scheduledAt is undefined or invalid:", { messageContent, scheduledAt });
             hasInvalidToolCall = true;
             
-            if (retryCount < MAX_RETRIES) {
-              return generateReply(userText, context, userId, userTimezone, retryCount + 1);
+            if (retryCount < MAX_RETRIES) {userId
+              return generateReply(userText, conversation, userId, userTimezone, retryCount + 1);
             } else {
               console.error("❌ Max retries reached. scheduledAt still undefined.");
               return "I'm having trouble scheduling that right now. Could you try asking again later?";
@@ -89,6 +89,16 @@ export async function createSummary(messages, previousSummary) {
     console.error("❌ Claude API error:", error.message);
     throw new Error("Failed to get summary response from Claude API");
   }
+}
+
+export async function generateInitiateConversation(summary) {
+  const prompt = prompts.generateInitiateConversation(summary);
+  const message = await client.messages.create({
+    model: model,
+    max_tokens: defaultMaxTokens,
+    system: prompt,
+    messages: [{ role: "user", content: userText }],
+  });
 }
 
 function scheduleMessage(content, scheduledAt, userId, userTimezone) {

@@ -13,6 +13,10 @@ export const prompts = {
       ${messages.map((m) => `${m.role}: ${m.content}`).join("\n")}
       ${previousSummary ? `Previous summary: ${previousSummary}` : ""}
       Create a summary of your conversation that captures their habits, goals, challenges, and what matters to them. Write it like you're taking notes about a friend you care about - include the important stuff so you can be genuinely helpful next time. Just the summary, nothing else.`,
+
+  generateInitiateConversation: (summary) => `${prompts.common}
+      ${summary ? `Here's a summary of the user:\n${summary}` : ""}
+      In under 10 words, ask a friendly, thoughtful question to start a conversation with the user.`,
 };
 
 export const tools = {

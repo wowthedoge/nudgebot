@@ -6,7 +6,7 @@ import { detectTimezoneFromPhone } from "./timezones.js";
 
 const app = express();
 app.use(express.json());
-const SAVE_MESSAGE_COUNT = 20;
+const SAVE_MESSAGE_COUNT = 30;
 
 // ✅ Verify webhook
 app.get("/webhook", (req, res) => {
@@ -81,13 +81,24 @@ async function processScheduledMessages() {
   }
 }
 
+async function initiateConversations() {
+  const staleUserSummaries = await db.getStaleConversationUserSummaries();
+  for (const staleUserSummary of staleUserSummaries) {
+    const reply = await claudeApi.generateInitiateConversation(staleUserSummary.summary.text);  
+    await db.saveMessage(staleUserSummary.userId, "assistant", reply);
+    await sendWhatsAppMessage(staleUserSummary.user.phoneNumber, reply);
+  }
+}
+
+const INITIATE_CONVERSATION_INTERVAL = (process.env.INITIATE_CONVERSATION_INTERVAL_HOURS || 3) * 60 * 60 * 1000;
 const SCHEDULED_MESSAGE_INTERVAL = (process.env.SCHEDULED_MESSAGE_INTERVAL_MINUTES || 5) * 60 * 1000;
+
+setInterval(initiateConversations, INITIATE_CONVERSATION_INTERVAL);
 setInterval(processScheduledMessages, SCHEDULED_MESSAGE_INTERVAL);
 
 // Run once on startup to catch any messages that should have been sent while the server was down
 processScheduledMessages();
 
-// ✅ Handle WhatsApp messages
 app.post("/webhook", async (req, res) => {
   try {
     const entry = req.body.entry?.[0];

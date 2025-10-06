@@ -1,6 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
+const STALE_CONVERSATION_HOURS = process.env.STALE_CONVERSATION_HOURS || 24;
+
 export async function getOrCreateUser(phoneNumber) {
   return prisma.user.upsert({
     where: { phoneNumber },
@@ -82,5 +84,28 @@ export function updateUserTimezone(userId, timezone) {
   return prisma.user.update({
     where: { id: userId },
     data: { timezone },
+  });
+}
+
+export async function getStaleConversationUserSummaries() {
+  return prisma.user.findMany({
+    where: {
+      messages: {
+        some: {
+          createdAt: {
+            lte: new Date(new Date().getTime() - STALE_CONVERSATION_HOURS * 60 * 60 * 1000),
+          },
+        },
+      },
+    },
+    include: {
+      summary: true,
+      messages: {
+        orderBy: {
+          createdAt: 'desc',
+        },
+        take: 1,
+      },
+    },
   });
 }
